@@ -181,11 +181,11 @@ const LimitController = {
 
 patch(
   GeoengineRenderer.prototype,
-  "base_geoengine_fix.blank_layer",
+  "base_geoengine_msd.extended_msd",
   ExtendedMSD
 );
 patch(
-    GeoengineController.prototype,
-    "base_geoengine_fix.limit_controller",
-    LimitController
+  GeoengineController.prototype,
+  "base_geoengine_msd.limit_controller",
+  LimitController
 );

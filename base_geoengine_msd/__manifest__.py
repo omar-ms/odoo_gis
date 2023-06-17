@@ -19,7 +19,7 @@
     ],
     "assets": {
         "web.assets_backend": [
-            "base_geoengine_fix/static/src/js/extended_msd.js",
+            "base_geoengine_msd/static/src/js/extended_msd.js",
         ],
     },
 
