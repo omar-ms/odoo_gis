@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record model="ir.ui.view" id="geo_vector_view_form_fix">
+        <field name="name">geoengine.vector.layer.form..fix.inherit</field>
+        <field name="model">geoengine.vector.layer</field>
+        <field name="inherit_id" ref="base_geoengine.geo_vector_view_form" />
+        <field name="arch" type="xml">
+            <field name="display_polygon_labels" position="after">
+                <field name="label_field_id"
+                    attrs="{'invisible': [('display_polygon_labels', '=', False)], 'required': [('display_polygon_labels', '=', True)]}" />
+                <field name="label_field_name" invisible="1" />
+            </field>
+        </field>
+    </record>
+</odoo>

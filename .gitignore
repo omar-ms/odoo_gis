@@ -1,0 +1,7 @@
+/.vscode
+/.VSCodeCounter
+/pyrightconfig.json
+__pycache__
+
+*.pyc
+*.pyo
