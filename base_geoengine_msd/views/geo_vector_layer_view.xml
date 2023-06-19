@@ -10,6 +10,13 @@
                 <field name="label_field_id"
                     attrs="{'invisible': [('display_polygon_labels', '=', False)], 'required': [('display_polygon_labels', '=', True)]}" />
                 <field name="label_field_name" invisible="1" />
+                <field name="open_record_view_id" />
+
+            </field>
+            <field name="begin_color" position="after">
+                <label for="color_scale" string="Color Scale" />
+                <field name="color_scale"
+                    attrs="{'invisible': [('classification', '!=', 'unique')]}" />
             </field>
         </field>
     </record>

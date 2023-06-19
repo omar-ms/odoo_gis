@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<templates id="template" xml:space="preserve">
+
+    <t t-name="LayersPanelFix" t-inherit="base_geoengine.LayersPanel" t-inherit-mode="extension" owl="1">
+
+        <xpath expr="//button[contains(.//i/@class, 'fa-filter')]" position="attributes">
+            <attribute name="t-if">vector.model_id !== false &amp;&amp; isGeoengineAdmin</attribute>
+        </xpath>
+
+    </t>
+
+</templates>

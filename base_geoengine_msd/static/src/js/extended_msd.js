@@ -1,8 +1,13 @@
 /** @odoo-module */
 //import {BlankLayer} from "./blank/blank";
-import {GeoengineRenderer} from "@base_geoengine/js/views/geoengine/geoengine_renderer/geoengine_renderer.esm";
-import {GeoengineController} from "@base_geoengine/js/views/geoengine/geoengine_controller/geoengine_controller.esm";
-import {patch} from "@web/core/utils/patch";
+import { GeoengineRenderer } from "@base_geoengine/js/views/geoengine/geoengine_renderer/geoengine_renderer.esm";
+import { GeoengineController } from "@base_geoengine/js/views/geoengine/geoengine_controller/geoengine_controller.esm";
+import { LayersPanel } from "@base_geoengine/js/views/geoengine/layers_panel/layers_panel.esm";
+import { geoengineView } from "@base_geoengine/js/views/geoengine/geoengine_view.esm";
+import { patch } from "@web/core/utils/patch";
+import { registry } from "@web/core/registry";
+
+const LEGEND_MAX_ITEMS = 10;
 
 const ExtendedMSD = {
   createBackgroundLayers(backgrounds) {
@@ -127,6 +132,19 @@ const ExtendedMSD = {
         });
     }
   },
+  createStyleText() {
+    return new ol.style.Text({
+      font: "bold 11px Arial, Verdana, Helvetica, sans-seri",
+      text: "",
+      fill: new ol.style.Fill({
+        color: "#FFFFFF",
+      }),
+      stroke: new ol.style.Stroke({
+        color: "#000000",
+        width: 1,
+      }),
+    });
+  },
   addFeatureToSource(data, cfg, vectorSource) {
     data.forEach((item) => {
       var attributes =
@@ -134,9 +152,6 @@ const ExtendedMSD = {
       this.geometryFields.forEach((geo_field) => delete attributes[geo_field]);
 
       if (cfg.display_polygon_labels === true) {
-        console.log("display_polygon_labels");
-        console.log(cfg);
-        console.log(item);
         attributes.label =
           item._values === undefined
             ? item[cfg.label_field_name]
@@ -162,21 +177,200 @@ const ExtendedMSD = {
       }
     });
   },
+  zoomOnFeature(record) {
+    const feature = this.vectorSource.getFeatureById(record.resId);
+    var map_view = this.map.getView();
+    if (map_view) {
+      map_view.fit(feature.getGeometry(), { maxZoom: 20 });
+    }
+  },
+  getOriginalZoom() {
+    var extent = this.vectorLayersResult
+      .find((res) => res.values_.visible === true)
+      .getSource()
+      .getExtent();
+    var infinite_extent = [Infinity, Infinity, -Infinity, -Infinity];
+    if (extent !== infinite_extent) {
+      var map_view = this.map.getView();
+      if (map_view) {
+        map_view.fit(extent);
+      }
+    }
+  },
+  updateZoom() {
+    if (this.state.isFit) {
+      this.map.getView().setZoom(localStorage.getItem("ol-zoom"));
+    } else if (this.props.data.records.length) {
+      this.getOriginalZoom();
+      this.state.isFit = true;
+    }
+  },
+  styleVectorLayerColored(cfg, data) {
+    var indicator = cfg.attribute_field_id[1];
+    var values = this.extractLayerValues(cfg, data);
+    //values = values.map((value) => this.humanizeString(value));
+    var nb_class = cfg.nb_class || DEFAULT_NUM_CLASSES;
+    var opacity = cfg.layer_opacity;
+    var begin_color_hex = cfg.begin_color || DEFAULT_BEGIN_COLOR;
+    var end_color_hex = cfg.end_color || DEFAULT_END_COLOR;
+    var begin_color = chroma(begin_color_hex).alpha(opacity).css();
+    var end_color = chroma(end_color_hex).alpha(opacity).css();
+    // Function that maps numeric values to a color palette.
+    // This scale function is only used when geo_repr is basic
+    var scale = chroma.scale([begin_color, end_color]);
+    var serie = new geostats(values);
+    var vals = null;
+    switch (cfg.classification) {
+      case "unique":
+      case "custom":
+        vals = serie.getClassUniqueValues();
+        // "RdYlBu" is a set of colors
+        var color_scale = "RdYlBu";
+        if (cfg.color_scale && cfg.color_scale.split(",").length > 1) {
+          color_scale = cfg.color_scale.split(",");
+        } else if (cfg.color_scale && cfg.color_scale.split(",").length == 1) {
+          color_scale = cfg.color_scale;
+        }
+
+        scale = chroma.scale(color_scale).domain([0, vals.length], vals.length);
+        break;
+      case "quantile":
+        serie.getClassQuantile(nb_class);
+        vals = serie.getRanges();
+        scale = scale.domain([0, vals.length], vals.length);
+        break;
+      case "interval":
+        serie.getClassEqInterval(nb_class);
+        vals = serie.getRanges();
+        scale = scale.domain([0, vals.length], vals.length);
+        break;
+    }
+    let colors = [];
+    if (cfg.classification === "custom") {
+      colors = vals.map((val) => {
+        if (val) {
+          return chroma(val).alpha(opacity).css();
+        }
+      });
+    } else {
+      colors = scale
+        .colors(vals.length)
+        .map((color) => chroma(color).alpha(opacity).css());
+    }
+    const styles_map = this.createStylesWithColors(colors);
+    let legend = null;
+    if (vals.length <= LEGEND_MAX_ITEMS) {
+      legend = serie.getHtmlLegend(colors, cfg.name, 1);
+    }
+    return {
+      style: (feature) => {
+        const value = feature.get("attributes")[indicator];
+        const color_idx = this.getClass(value, vals);
+        var label_text = feature.values_.attributes.label;
+        if (label_text === false || typeof label_text === "undefined") {
+          label_text = "";
+        }
+        styles_map[colors[color_idx]][0].text_.text_ = label_text.toString();
+        return styles_map[colors[color_idx]];
+      },
+      legend,
+    };
+  },
+  humanizeString(str) {
+    return str.replace(/_/g, " ").replace(/\b\w/g, function (str) {
+      return str.toUpperCase();
+    });
+  },
+  async getModelData(cfg, fields_to_read) {
+    const domain = this.evalModelDomain(cfg);
+    let context_domain = this.props.data.domain || [[]];
+    let model = this.models.filter((e) => e.model.resModel === cfg.model)[0];
+    const activeFieldsNames = Object.keys(model.model.activeFields).map(
+      (key) => model.model.activeFields[key].name
+    );
+    // filter context_domain to only include array of length 3
+    context_domain = context_domain.filter(
+      (e) =>
+        e.length === 3 &&
+        activeFieldsNames.includes(e[0]) &&
+        (e[1] !== false || e[2] !== false)
+    );
+    domain.push(...context_domain);
+
+    let data = await this.orm.searchRead(
+      cfg.model,
+      [domain][0],
+      fields_to_read
+    );
+    const modelsRecords = this.models.find(
+      (e) => e.model.resModel === cfg.model
+    ).model.records;
+    data = data.map((data) =>
+      modelsRecords.find((rec) => rec.resId === data.id)
+    );
+
+    if (cfg.open_record_view_id) {
+      data = data.map((record) => {
+        record.viewId = cfg.open_record_view_id[0];
+        return record;
+      });
+    }
+
+    return data;
+  },
+  onInfoBoxClicked() {
+    //this.props.openRecord(this.record.resModel, this.record.resId);
+    this.services.action.doAction({
+      type: "ir.actions.act_window",
+      res_model: this.record.resModel,
+      res_id: this.record.resId,
+      views: [[this.record.viewId, "form"]],
+      name: "View Record",
+      view_mode: "form",
+      view_type: "form",
+      target: "new",
+      context: { create: false, edit: false },
+      flags: {
+        mode: "readonly",
+        create: false,
+        form: { no_create: true },
+      },
+    });
+  },
+  async createVectorLayer(cfg) {
+    if (cfg.open_record_view_id) {
+      this.props.data.records = this.props.data.records.map((record) => {
+        record.viewId = cfg.open_record_view_id[0];
+        return record;
+      });
+    }
+    return await this._super(cfg);
+  },
 };
 
 const LimitController = {
-    setup() {
-        // extract limit from this.props.archInfo.arch
-        const match = this.props.archInfo.arch.match(/limit="([^"]+)"/);
-        if (match && match.length > 1) {
-            const extractedValue = Number(match[1]);
-            // Check if the extracted value is a number
-            if (!isNaN(extractedValue)) {
-                this.props.limit = extractedValue;
-            }
-        }
-        this._super();
-    },
+  setup() {
+    const match = this.props.archInfo.arch.match(/limit="([^"]+)"/);
+    if (match && match.length > 1) {
+      const extractedValue = Number(match[1]);
+      // Check if the extracted value is a number
+      if (!isNaN(extractedValue)) {
+        this.props.limit = extractedValue;
+      }
+    }
+    this._super();
+  },
+};
+
+const GetViewFix = {
+  async loadLayers() {
+    this.ReqViewId = this.env.config.viewId || null;
+    return this.orm
+      .call(this.props.model, "get_geoengine_layers", [this.ReqViewId])
+      .then((result) => {
+        this.state.geoengineLayers = result;
+      });
+  },
 };
 
 patch(
@@ -189,3 +383,4 @@ patch(
   "base_geoengine_msd.limit_controller",
   LimitController
 );
+patch(LayersPanel.prototype, "base_geoengine_msd.get_view_fix", GetViewFix);
