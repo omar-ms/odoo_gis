@@ -3,6 +3,30 @@
 
     <t t-name="LayersPanelFix" t-inherit="base_geoengine.LayersPanel" t-inherit-mode="extension" owl="1">
 
+        <!--XPATH
+        FOR <i class="fa fa-sort m-3" /> -->
+
+        <xpath expr="//i[@class='fa fa-sort m-3']" position="attributes">
+            <attribute name="t-if">isGeoengineAdmin</attribute>
+        </xpath>
+
+        <!--XPATH
+        FOR <CheckBox/> -->
+        <xpath expr="//CheckBox" position="replace">
+            <t t-if="isGeoengineAdmin">
+                <CheckBox value="vector.isVisible"
+                    t-on-change="() => this.onVectorChange(vector, 'onVisibleChanged', !vector.isVisible)">
+                    <t t-esc="vector.name" />
+                </CheckBox>
+            </t>
+            <t t-else="">
+                <CheckBox value="vector.isVisible" disabled="true"
+                    t-on-change="() => this.onVectorChange(vector, 'onVisibleChanged', !vector.isVisible)">
+                    <t t-esc="vector.name" />
+                </CheckBox>
+            </t>
+        </xpath>
+
         <xpath expr="//button[contains(.//i/@class, 'fa-filter')]" position="attributes">
             <attribute name="t-if">vector.model_id !== false &amp;&amp; isGeoengineAdmin</attribute>
         </xpath>

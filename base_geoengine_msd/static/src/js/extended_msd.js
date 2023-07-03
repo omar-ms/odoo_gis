@@ -3,10 +3,68 @@
 import { GeoengineRenderer } from "@base_geoengine/js/views/geoengine/geoengine_renderer/geoengine_renderer.esm";
 import { GeoengineController } from "@base_geoengine/js/views/geoengine/geoengine_controller/geoengine_controller.esm";
 import { LayersPanel } from "@base_geoengine/js/views/geoengine/layers_panel/layers_panel.esm";
-import { geoengineView } from "@base_geoengine/js/views/geoengine/geoengine_view.esm";
 import { patch } from "@web/core/utils/patch";
 import { registry } from "@web/core/registry";
+import {
+  useOwnedDialogs,
+  useService,
+  useModel,
+  useBus,
+} from "@web/core/utils/hooks";
+/*
+const GeoEngineBus = {
+  dependencies: ["action", "bus_service", "notification", "rpc"],
+  start(_, { bus_service, notification, rpc, action }) {
+    console.log("Add bus_service");
 
+    bus_service.addChannel("GeoEngineBus"); // New channel
+
+    bus_service.addEventListener(
+      "notification",
+      ({ detail: notifications }) => {
+        console.log({ notifications });
+
+        for (const { payload, type } of notifications) {
+          if (type === "refresh") {
+            this.refreshHandler(payload);
+          }
+          if (type === "notification") {
+            this.notificationHandler(payload);
+          }
+        }
+      }
+    );
+
+    bus_service.addEventListener("connect", () => {
+      console.log("Connected");
+    });
+
+    bus_service.start();
+    this.actionService = action;
+    this.notif = notification;
+    this._rpc = rpc;
+  },
+
+  refreshHandler(payload) {
+    console.log(payload);
+    this.trigger_up("reload");
+    //this.actionService.doAction(payload)
+    //this.model.reload();
+  },
+  notificationHandler(payload) {
+    console.log({ payload });
+
+    this.actionService.doAction({
+      type: "ir.actions.client",
+      tag: "display_notification",
+      params: {
+        message: _("message"),
+        sticky: false,
+      },
+    });
+  },
+};
+*/
 const LEGEND_MAX_ITEMS = 10;
 
 const ExtendedMSD = {
@@ -338,7 +396,10 @@ const ExtendedMSD = {
     });
   },
   async createVectorLayer(cfg) {
-    if (cfg.open_record_view_id) {
+    if (
+      cfg.open_record_view_id &&
+      cfg.geo_field_model_name == this.props.data.resModel
+    ) {
       this.props.data.records = this.props.data.records.map((record) => {
         record.viewId = cfg.open_record_view_id[0];
         return record;
@@ -350,6 +411,9 @@ const ExtendedMSD = {
 
 const LimitController = {
   setup() {
+    console.log(this);
+    //this.GeoEngineBus = GeoEngineBus;
+    //registry.category("services").add("GeoEngineBus", this.GeoEngineBus);
     const match = this.props.archInfo.arch.match(/limit="([^"]+)"/);
     if (match && match.length > 1) {
       const extractedValue = Number(match[1]);
@@ -358,7 +422,11 @@ const LimitController = {
         this.props.limit = extractedValue;
       }
     }
+
     this._super();
+  },
+  busHandler() {
+    console.log("busHandler");
   },
 };
 

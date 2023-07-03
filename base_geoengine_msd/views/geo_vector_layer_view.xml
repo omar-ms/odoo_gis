@@ -9,6 +9,7 @@
             <field name="display_polygon_labels" position="after">
                 <field name="label_field_id"
                     attrs="{'invisible': [('display_polygon_labels', '=', False)], 'required': [('display_polygon_labels', '=', True)]}" />
+                <field name="geo_field_model_name" invisible="1" />
                 <field name="label_field_name" invisible="1" />
                 <field name="open_record_view_id" />
 

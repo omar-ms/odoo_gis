@@ -23,8 +23,9 @@ class GeoVectorLayer(models.Model):
     label_field_id = fields.Many2one(
         "ir.model.fields", "Label field", domain=[("ttype", "in", SUPPORTED_ATT)]
     )
-    label_field_name = fields.Char(related="label_field_id.name", readonly=True)
     open_record_view_id = fields.Many2one("ir.ui.view" , string="Open Button View" , domain=[('type','=','form')])
+    label_field_name = fields.Char(related="label_field_id.name", readonly=True,string="Label Field Name")
+    geo_field_model_name = fields.Char(related='geo_field_id.model_id.model' ,readonly=True, string="Geo Field Model")
 
     color_scale = fields.Selection(
         [
