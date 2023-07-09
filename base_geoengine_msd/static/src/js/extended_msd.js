@@ -273,6 +273,9 @@ const ExtendedMSD = {
     var end_color_hex = cfg.end_color || DEFAULT_END_COLOR;
     var begin_color = chroma(begin_color_hex).alpha(opacity).css();
     var end_color = chroma(end_color_hex).alpha(opacity).css();
+    var manual_min_max = cfg.manual_min_max;
+    var force_min = cfg.force_min;
+    var force_max = cfg.force_max;
     // Function that maps numeric values to a color palette.
     // This scale function is only used when geo_repr is basic
     var scale = chroma.scale([begin_color, end_color]);
@@ -298,7 +301,12 @@ const ExtendedMSD = {
         scale = scale.domain([0, vals.length], vals.length);
         break;
       case "interval":
-        serie.getClassEqInterval(nb_class);
+        console.log("manual_min_max", manual_min_max);
+        if (manual_min_max) {
+          serie.getClassEqInterval(nb_class, force_min, force_max);
+        } else {
+          serie.getClassEqInterval(nb_class);
+        }
         vals = serie.getRanges();
         scale = scale.domain([0, vals.length], vals.length);
         break;
@@ -411,7 +419,7 @@ const ExtendedMSD = {
 
 const LimitController = {
   setup() {
-    console.log(this);
+    //console.log(this);
     //this.GeoEngineBus = GeoEngineBus;
     //registry.category("services").add("GeoEngineBus", this.GeoEngineBus);
     const match = this.props.archInfo.arch.match(/limit="([^"]+)"/);

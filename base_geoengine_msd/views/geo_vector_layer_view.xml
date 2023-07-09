@@ -14,11 +14,22 @@
                 <field name="open_record_view_id" />
 
             </field>
+            <field name="classification" position="after">
+
+                <field name="manual_min_max"
+                    attrs="{'invisible': [('classification', '!=', 'interval')]}" />
+
+                <field name="force_min" attrs="{'invisible': [('manual_min_max', '=', False)]}" />
+
+                <field name="force_max" attrs="{'invisible': [('manual_min_max', '=', False)]}" />
+            </field>
+
             <field name="begin_color" position="after">
                 <label for="color_scale" string="Color Scale" />
                 <field name="color_scale"
                     attrs="{'invisible': [('classification', '!=', 'unique')]}" />
             </field>
+
         </field>
     </record>
 </odoo>

@@ -32,11 +32,22 @@ class GeoVectorLayer(models.Model):
             ("RdYlBu", "Red Yellow Blue"),
             ("#33A0FF,#309900,#005299", "Cyan Green Blue"),
             ("#FFF824,#B82E2E", "Yellow Red"),
-            ("#FFF824,#808080", "Yellow Gray")
+            ("#FFF824,#808080", "Yellow Gray"),
+            ("#FF0000,#11FF00", "Red Green"),
             ],
         string="Color scale",
         default="RdYlBu"
     )
+    force_min = fields.Float(string="Force Min",default=False)
+    force_max = fields.Float(string="Force Max",default=False)
+    manual_min_max = fields.Boolean(string="Force Min/Max Values",store=True)
+
+    @api.onchange("manual_min_max")
+    def _onchange_manual_min_max(self):
+        if self.manual_min_max:
+            self.force_min = self.force_max = 0.0
+        else:
+            self.force_min = self.force_max = False
 
 
     @api.onchange("display_polygon_labels","geo_field_id")
