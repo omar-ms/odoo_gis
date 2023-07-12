@@ -48,6 +48,14 @@ class GeoVectorLayer(models.Model):
             self.force_min = self.force_max = 0.0
         else:
             self.force_min = self.force_max = False
+    
+    @api.onchange("force_min","force_max")
+    def _onchange_force_min_max(self):
+        if self.force_min > self.force_max:
+            self.force_max = self.force_min + 1.0
+
+        if self.force_min == 0.0 and self.force_max == 0.0 and self.manual_min_max:
+            self.force_max = 1.0
 
 
     @api.onchange("display_polygon_labels","geo_field_id")

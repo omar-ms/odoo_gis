@@ -301,8 +301,9 @@ const ExtendedMSD = {
         scale = scale.domain([0, vals.length], vals.length);
         break;
       case "interval":
-        console.log("manual_min_max", manual_min_max);
         if (manual_min_max) {
+          if (force_min > force_max) force_max = force_min++;
+          if (force_min == 0 && force_max == 0) force_max = 1;
           serie.getClassEqInterval(nb_class, force_min, force_max);
         } else {
           serie.getClassEqInterval(nb_class);
